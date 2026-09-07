@@ -8,14 +8,14 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-west-1"
+  region = var.aws_region
 }
 
 resource "aws_s3_bucket" "miprimerbucket" {
-  bucket = "mi-laboratorio-tf-ricardo-2026-09-06"
+  bucket = var.bucket_name
 
   tags = {
-    Environment = "Dev"
+    Environment = var.environment
     ManagedBy   = "Terraform"
   }
 }
