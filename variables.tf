@@ -15,3 +15,9 @@ variable "environment" {
   type        = string
   default     = "Dev"
 }
+
+variable "instance_type" {
+  description = "Tipo de instancia EC2 (capa gratuira)"
+  type        = string
+  default     = "t2.micro"
+}
