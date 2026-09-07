@@ -1,0 +1,29 @@
+name: Validador de Laboratorio
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  comprobar-codigo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo del repo
+        uses: actions/checkout@v4
+
+      - name: Instalar Terraform en el evaluador
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: 1. Comprobar formato correcto (terraform fmt)
+        run: terraform fmt -check
+        continue-on-error: false
+
+      - name: 2. Inicializar entorno (terraform init)
+        run: terraform init -backend=false
+
+      - name: 3. Validar sintaxis y reglas (terraform validate)
+        run: terraform validate
