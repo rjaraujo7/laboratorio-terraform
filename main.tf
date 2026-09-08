@@ -31,7 +31,7 @@ resource "aws_vpc" "mi_vpc" {
 }
 
 resource "aws_subnet" "mi_subnet" {
-  vpc_id            = aws_vpc.mi_vpc
+  vpc_id            = aws_vpc.mi_vpc.id
   cidr_block        = "10.0.1.0/24"
   availability_zone = "${var.aws_region}a"
 
@@ -66,7 +66,7 @@ resource "aws_security_group" "mi_sg" {
 }
 
 resource "aws_instance" "mi_servidor" {
-  ami                    = "ami-0c55b159cbfafe1f0" #ID de la imagen representativo
+  ami                    = "ami-0905a3c97561e0b69" #ID de la imagen representativo
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.mi_subnet.id
   vpc_security_group_ids = [aws_security_group.mi_sg.id]
