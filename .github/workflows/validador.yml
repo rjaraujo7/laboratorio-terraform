@@ -50,7 +50,7 @@ jobs:
       - name: Run Trivy IaC Security Scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          scan-type: 'fs'
+          scan-type: 'config'
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
