@@ -16,13 +16,13 @@ resource "aws_security_group" "web_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["93.156.194.72/32"]
   }
 
   egress {
     description = "Permitir todo el trafico saliente"
-    from_port   = 0
-    to_port     = 0
+    from_port   = 80
+    to_port     = 80
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -40,6 +40,15 @@ resource "aws_instance" "web_server" {
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
   associate_public_ip_address = true
   user_data_replace_on_change = true
+
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    encrypted = true
+  }
 
   user_data = <<-EOF
               #!/bin/bash
