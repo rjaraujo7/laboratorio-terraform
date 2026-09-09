@@ -23,7 +23,7 @@ resource "aws_security_group" "web_sg" {
     description = "Permitir todo el trafico saliente"
     from_port   = 80
     to_port     = 80
-    protocol    = "-1"
+    protocol    = "tcp"
     cidr_blocks = ["93.156.194.72/32"]
   }
 
