@@ -122,7 +122,7 @@ resource "aws_instance" "mi_servidor" {
               apt-get install -y nginx
               systemctl enable nginx
               systemctl start nginx
-              echo "<h1>Hola mundo desde Terraform</h1>" > /var/www/html/index.html
+              echo "<h1>Nico! Mucha suerte en el insti! Nos vemos a la vuelta</h1>" > /var/www/html/index.html
               EOF
   tags = {
     Name        = "servidor-laboratorio-web"
