@@ -28,21 +28,31 @@ jobs:
         with:
           terraform_version: 1.8.0
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-
       - name: Check code formatting
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive
 
       - name: Initialize Terraform
         run: terraform init
 
       - name: Validate syntax
         run: terraform validate
+
+      # Escaneo de seguridad estático de Infraestructura como Código (IaC)
+      - name: Run Trivy IaC Security Scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0' # Con 0 muestra el reporte sin bloquear el pipeline mientras aprendemos
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
 
       - name: Run Terraform Plan
         if: "${{ github.event.inputs.action != 'destroy' }}"
