@@ -24,7 +24,7 @@ resource "aws_security_group" "web_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["93.156.194.72/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
