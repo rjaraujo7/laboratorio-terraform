@@ -50,8 +50,8 @@ resource "aws_subnet" "mi_subnet" {
 }
 
 resource "aws_security_group" "mi_sg" {
-  name        = "permitir-shh"
-  description = "Permitir trafico SSH entrante"
+  name        = "permitir-shh-http"
+  description = "Permitir trafico SSH entrante y http web"
   vpc_id      = aws_vpc.mi_vpc.id
 
   ingress {
@@ -62,7 +62,16 @@ resource "aws_security_group" "mi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Acceso HTTP web Nginx"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
+    description = "Salida total a internet"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -75,13 +84,22 @@ resource "aws_security_group" "mi_sg" {
 }
 
 resource "aws_instance" "mi_servidor" {
-  ami                    = "ami-0905a3c97561e0b69" #ID de la imagen representativo
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.mi_subnet.id
-  vpc_security_group_ids = [aws_security_group.mi_sg.id]
+  ami                         = "ami-0905a3c97561e0b69" #ID de la imagen representativo
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.mi_subnet.id
+  vpc_security_group_ids      = [aws_security_group.mi_sg.id]
+  associate_public_ip_address = true
 
+  user_data = <<-EOF
+              #!/bin/bash
+              apt-get update -y
+              apt-get install -y nginx
+              systemctl enable nginx
+              systemctl start nginx
+              echo "<h1>Hola mundo desde Terraform</h1>" > /var/www/html/index.html
+              EOF
   tags = {
-    Name        = "vpc-laboratorio"
+    Name        = "servidor-laboratorio-web"
     Environment = var.environment
   }
 }
