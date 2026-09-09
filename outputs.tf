@@ -18,3 +18,7 @@ output "ec2_private_ip" {
   value       = aws_instance.mi_servidor.private_ip
 }
 
+output "servidor_web_url" {
+  description = "URL publica del servidor Nginx"
+  value       = "http://${aws_instance.mi_servidor.public_ip}"
+}
