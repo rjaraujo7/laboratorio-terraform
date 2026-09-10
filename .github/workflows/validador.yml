@@ -32,6 +32,15 @@ jobs:
         with:
           terraform_version: 1.8.0
 
+
+# Diagnóstico: ver qué claim exacto está enviando GitHub
+      - name: Print OIDC Subject Claim
+        run: |
+          echo "Repo: $GITHUB_REPOSITORY"
+          echo "Ref: $GITHUB_REF"
+          echo "Workflow Event: $GITHUB_EVENT_NAME"
+          echo "Expected Subject: repo:${GITHUB_REPOSITORY}:ref:${GITHUB_REF}"
+
       # 1. Autenticar primero para tener acceso a S3 y DynamoDB
     
       - name: Configure AWS Credentials via OIDC
