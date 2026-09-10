@@ -33,7 +33,7 @@ jobs:
           terraform_version: 1.8.0
 
       # 1. Autenticar primero para tener acceso a S3 y DynamoDB
-    steps:
+    
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
