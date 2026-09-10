@@ -37,8 +37,8 @@ jobs:
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-        role-to-assume: arn:aws:iam::374320036543:role/GitHubActionsTerraformRole
-        aws-region: eu-west-1
+          role-to-assume: arn:aws:iam::374320036543:role/GitHubActionsTerraformRole
+          aws-region: eu-west-1
 
 
       # 2. Comprobaciones de sintaxis e inicialización
