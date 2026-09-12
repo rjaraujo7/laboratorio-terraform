@@ -7,13 +7,13 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "laboratorio-terraform-state-374320036543"
-    key            = "laboratorio/terraform.tfstate"
-    region         = "eu-west-1"
-    dynamodb_table = "terraform-state-locks"
-    encrypt        = true
-  }
+  # backend "s3" {
+  #   bucket         = "laboratorio-terraform-state-374320036543"
+  #   key            = "laboratorio/terraform.tfstate"
+  #   region         = "eu-west-1"
+  #   dynamodb_table = "terraform-state-locks"
+  #   encrypt        = true
+  # }
 }
 
 provider "aws" {
