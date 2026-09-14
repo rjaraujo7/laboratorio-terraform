@@ -104,7 +104,7 @@ jobs:
     needs: terraform-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'plan')
-    environment: ${{ needs.terraform-plan.outputs.target_env }}
+    environment: pro #${{ needs.terraform-plan.outputs.target_env }}
     permissions:
       id-token: write
       contents: read
