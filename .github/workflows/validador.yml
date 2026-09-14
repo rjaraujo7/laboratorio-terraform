@@ -1,6 +1,6 @@
 name: "Terraform CI/CD Multi-Environment"
 
-'on':
+"on":
   push:
     branches: [uat, pro]
   pull_request:
@@ -26,13 +26,19 @@ name: "Terraform CI/CD Multi-Environment"
           - destroy
 
 jobs:
-  terraform:
-    name: "Terraform Pipeline"
+  # -------------------------------------------------------------------
+  # 1. PLANIFICACIÓN Y VALIDACIÓN (No requiere aprobación previa)
+  # -------------------------------------------------------------------
+  terraform-plan:
+    name: "Terraform Plan & Scan"
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
       pull-requests: write
+
+    outputs:
+      target_env: ${{ steps.set-env.outputs.TARGET_ENV }}
 
     steps:
       - name: Checkout repository
@@ -90,11 +96,45 @@ jobs:
             -var-file=vars/${{ steps.set-env.outputs.TARGET_ENV }}/${{ steps.set-env.outputs.TARGET_ENV }}.tfvars \
             -input=false
 
+  # -------------------------------------------------------------------
+  # 2. APLICACIÓN O DESTRUCCIÓN (Protegido con GitHub Environment)
+  # -------------------------------------------------------------------
+  terraform-apply:
+    name: "Terraform Apply / Destroy"
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'plan')
+    environment: ${{ needs.terraform-plan.outputs.target_env }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::374320036543:role/GitHubActionsTerraformRole
+          aws-region: eu-west-1
+
+      - name: Initialize Terraform
+        run: |
+          terraform init \
+            -backend-config=vars/${{ needs.terraform-plan.outputs.target_env }}/state.config \
+            -reconfigure
+
       - name: Run Terraform Apply
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         run: |
           terraform apply \
-            -var-file=vars/${{ steps.set-env.outputs.TARGET_ENV }}/${{ steps.set-env.outputs.TARGET_ENV }}.tfvars \
+            -var-file=vars/${{ needs.terraform-plan.outputs.target_env }}/${{ needs.terraform-plan.outputs.target_env }}.tfvars \
             -auto-approve \
             -input=false
 
@@ -102,6 +142,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
           terraform destroy \
-            -var-file=vars/${{ steps.set-env.outputs.TARGET_ENV }}/${{ steps.set-env.outputs.TARGET_ENV }}.tfvars \
+            -var-file=vars/${{ needs.terraform-plan.outputs.target_env }}/${{ needs.terraform-plan.outputs.target_env }}.tfvars \
             -auto-approve \
             -input=false
