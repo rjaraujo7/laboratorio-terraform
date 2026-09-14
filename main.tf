@@ -31,8 +31,8 @@ module "compute" {
   source        = "./modules/compute"
   vpc_id        = module.network.vpc_id
   subnet_id     = module.network.subnet_id
-  instance_type = "t3.micro"
-  environment   = "laboratorio"
+  instance_type = var.instance_type
+  environment   = var.environment
 }
 
 # resource "aws_s3_bucket" "miprimerbucket" {
