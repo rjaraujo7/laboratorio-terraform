@@ -24,15 +24,15 @@ module "network" {
   source      = "./modules/network"
   vpc_cidr    = "10.0.0.0/16"
   subnet_cidr = "10.0.1.0/24"
-  environment = "laboratorio"
+  environment = var.environment
 }
 
 module "compute" {
   source        = "./modules/compute"
   vpc_id        = module.network.vpc_id
   subnet_id     = module.network.subnet_id
-  instance_type = "t3.micro"
-  environment   = "laboratorio"
+  instance_type = var.instance_type
+  environment   = var.environment
 }
 
 # resource "aws_s3_bucket" "miprimerbucket" {
