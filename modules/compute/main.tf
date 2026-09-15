@@ -69,6 +69,6 @@ resource "aws_instance" "web_server" {
   tags = {
     Name        = "${var.environment}-web-server"
     Environment = var.environment
-    ManagedBy   = "Terraform-GitOps"
+    ManagedBy   = "Terraform-GitO"
   }
 }
