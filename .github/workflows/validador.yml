@@ -128,11 +128,10 @@ jobs:
 
             const output = `### Terraform Plan & Quality Report (\`${{ steps.set-env.outputs.TARGET_ENV }}\`)
             #### Checks de Validación:
-            * **Formato (`fmt`):** \`${{ steps.fmt.outcome == 'success' && ' Correcto' || ' Requiere fmt' }}\`
-            * **Inicialización (`init`):** \`${{ steps.init.outcome == 'success' && ' OK' || ' Fallo' }}\`
-            * **Sintaxis (`validate`):** \`${{ steps.validate.outcome == 'success' && ' Válida' || ' Errores' }}\`
-            * **Seguridad Trivy:** \`${{ steps.trivy.outcome == 'success' && ' Escaneado' || ' Revisar' }}\`
-
+            * **Formato (`fmt`):** \`${{ steps.fmt.outcome == 'success' && '✓ Correcto' || '✗ Requiere fmt' }}\`
+            * **Inicialización (`init`):** \`${{ steps.init.outcome == 'success' && '✓ OK' || '✗ Fallo' }}\`
+            * **Sintaxis (`validate`):** \`${{ steps.validate.outcome == 'success' && '✓ Válida' || '✗ Errores' }}\`
+            * **Seguridad Trivy:** \`${{ steps.trivy.outcome == 'success' && '✓ Escaneado' || '✗ Revisar' }}\`
             <details><summary> Ver desglose de cambios en la infraestructura (Click para desplegar)</summary>
 
             \`\`\`hcl
