@@ -1,6 +1,6 @@
 name: "Terraform CI/CD Multi-Environment"
 
-"on":
+on:
   push:
     branches: [uat, pro]
   pull_request:
@@ -27,7 +27,7 @@ name: "Terraform CI/CD Multi-Environment"
 
 jobs:
   # -------------------------------------------------------------------
-  # 1. PLANIFICACIÓN Y VALIDACIÓN (No requiere aprobación previa)
+  # 1. PLANIFICACIÓN, ESCANEO Y GENERACIÓN DE ARTEFACTO
   # -------------------------------------------------------------------
   terraform-plan:
     name: "Terraform Plan & Scan"
@@ -54,7 +54,7 @@ jobs:
           else
             ENV="${{ github.ref_name }}"
           fi
-          echo "TARGET_ENV=${ENV}" >> "$GITHUB_OUTPUT"
+          echo "TARGET_ENV=${ENV}" >> $GITHUB_OUTPUT
           echo "Ambiente seleccionado: ${ENV}"
 
       - name: Setup Terraform
@@ -89,15 +89,26 @@ jobs:
       - name: Validate syntax
         run: terraform validate
 
+      # Genera el plan binario solo si la acción va a ser aplicar o planificar
       - name: Run Terraform Plan
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'destroy') || github.event_name == 'push'
         run: |
           terraform plan \
             -var-file=vars/${{ steps.set-env.outputs.TARGET_ENV }}/${{ steps.set-env.outputs.TARGET_ENV }}.tfvars \
+            -out=tfplan \
             -input=false
 
+      # Sube el archivo binario tfplan como artefacto con retención de 1 día
+      - name: Upload Terraform Plan Artifact
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ steps.set-env.outputs.TARGET_ENV }}
+          path: tfplan
+          retention-days: 1
+
   # -------------------------------------------------------------------
-  # 2. APLICACIÓN O DESTRUCCIÓN (Protegido con GitHub Environment)
+  # 2. APLICACIÓN O DESTRUCCIÓN CONTROLADA
   # -------------------------------------------------------------------
   terraform-apply:
     name: "Terraform Apply / Destroy"
@@ -130,14 +141,23 @@ jobs:
             -backend-config=vars/${{ needs.terraform-plan.outputs.target_env }}/state.config \
             -reconfigure
 
+      # Descarga el artefacto tfplan generado en el job anterior
+      - name: Download Terraform Plan Artifact
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.terraform-plan.outputs.target_env }}
+
+      # Ejecuta el binario directamente (no necesita -var-file ni variables)
       - name: Run Terraform Apply
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         run: |
           terraform apply \
-            -var-file=vars/${{ needs.terraform-plan.outputs.target_env }}/${{ needs.terraform-plan.outputs.target_env }}.tfvars \
             -auto-approve \
-            -input=false
+            -input=false \
+            tfplan
 
+      # Para destroy sigue recalculando dinámicamente
       - name: Run Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
         run: |
