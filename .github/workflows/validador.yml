@@ -1,1 +1,219 @@
-          scan-type: "config"
+name: "Terraform CI/CD Multi-Environment"
+
+on:
+  push:
+    branches: [ uat, pro ]
+  pull_request:
+    branches: [ uat, pro ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno de despliegue"
+        required: true
+        default: "uat"
+        type: choice
+        options:
+          - uat
+          - pro
+      action:
+        description: "Accion a ejecutar"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. PLAN, ESCANEO Y COMENTARIO EN PULL REQUEST
+  # -------------------------------------------------------------------
+  terraform-plan:
+    name: "Terraform Plan & Scan"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    outputs:
+      target_env: ${{ steps.set-env.outputs.TARGET_ENV }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set Target Environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            ENV="${{ github.base_ref }}"
+          else
+            ENV="${{ github.ref_name }}"
+          fi
+          echo "TARGET_ENV=${ENV}" >> $GITHUB_OUTPUT
+          echo "Ambiente seleccionado: ${ENV}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::374320036543:role/GitHubActionsTerraformRole
+          aws-region: eu-west-1
+
+      - name: Check code formatting
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Run Trivy IaC Security Scanner
+        id: trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Initialize Terraform
+        id: init
+        run: |
+          terraform init \
+            -backend-config=vars/${{ steps.set-env.outputs.TARGET_ENV }}/state.config \
+            -reconfigure
+
+      - name: Validate syntax
+        id: validate
+        run: terraform validate -no-color
+
+      # Genera el plan binario y exporta la versión legible para el comentario
+      - name: Run Terraform Plan
+        id: plan
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'destroy') || github.event_name == 'push'
+        run: |
+          terraform plan \
+            -var-file=vars/${{ steps.set-env.outputs.TARGET_ENV }}/${{ steps.set-env.outputs.TARGET_ENV }}.tfvars \
+            -out=tfplan \
+            -input=false \
+            -no-color > plan_output.txt
+          cat plan_output.txt
+
+      # Publica el comentario automático en la Pull Request
+      - name: Post Plan to Pull Request
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            let planOutput;
+            try {
+              planOutput = fs.readFileSync('plan_output.txt', 'utf8');
+            } catch {
+              planOutput = 'No plan output generated or error reading file.';
+            }
+
+            if (planOutput.length > 60000) {
+              planOutput = planOutput.substring(0, 60000) +
+                '\n... [Salida truncada por límite de tamaño]';
+            }
+
+            const output = [
+              '### Terraform Plan & Quality Report',
+              '',
+              '#### Checks de Validación:',
+              '* **Formato:** ${{ steps.fmt.outcome == 'success' && '✓ Correcto' || '✗ Requiere fmt' }}',
+              '* **Inicialización:** ${{ steps.init.outcome == 'success' && '✓ OK' || '✗ Fallo' }}',
+              '* **Sintaxis:** ${{ steps.validate.outcome == 'success' && '✓ Válida' || '✗ Errores' }}',
+              '* **Seguridad Trivy:** ${{ steps.trivy.outcome == 'success' && '✓ Escaneado' || '✗ Revisar' }}',
+              '',
+              '<details><summary>Ver desglose de cambios</summary>',
+              '',
+              '```hcl',
+              planOutput,
+              '```',
+              '',
+              '</details>',
+              '',
+              '*Actor: @${{ github.actor }} | Commit: ${{ github.sha }}*'
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Upload Terraform Plan Artifact
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ steps.set-env.outputs.TARGET_ENV }}
+          path: tfplan
+          retention-days: 1
+
+  # -------------------------------------------------------------------
+  # 2. APLICACIÓN O DESTRUCCIÓN (Solo en Push o Manual)
+  # -------------------------------------------------------------------
+  terraform-apply:
+    name: "Terraform Apply / Destroy"
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'plan')
+    environment: ${{ needs.terraform-plan.outputs.target_env }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::374320036543:role/GitHubActionsTerraformRole
+          aws-region: eu-west-1
+
+      - name: Initialize Terraform
+        run: |
+          terraform init \
+            -backend-config=vars/${{ needs.terraform-plan.outputs.target_env }}/state.config \
+            -reconfigure
+
+      - name: Download Terraform Plan Artifact
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.terraform-plan.outputs.target_env }}
+
+      - name: Run Terraform Apply
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+        run: |
+          terraform apply \
+            -auto-approve \
+            -input=false \
+            tfplan
+
+      - name: Run Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        run: |
+          terraform destroy \
+            -var-file=vars/${{ needs.terraform-plan.outputs.target_env }}/${{ needs.terraform-plan.outputs.target_env }}.tfvars \
+            -auto-approve \
+            -input=false
