@@ -114,35 +114,40 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let planOutput = '';
+
+            let planOutput;
             try {
               planOutput = fs.readFileSync('plan_output.txt', 'utf8');
-            } catch (err) {
+            } catch {
               planOutput = 'No plan output generated or error reading file.';
             }
 
-            // Truncar si supera el límite de caracteres de GitHub
             if (planOutput.length > 60000) {
-              planOutput = planOutput.substring(0, 60000) + '\n... [Salida truncada por límite de tamaño]';
+              planOutput = planOutput.substring(0, 60000) +
+                '\n... [Salida truncada por límite de tamaño]';
             }
 
-            const output = `### Terraform Plan & Quality Report (\`${{ steps.set-env.outputs.TARGET_ENV }}\`)
-            #### Checks de Validación:
-            * **Formato (`fmt`):** \`${{ steps.fmt.outcome == 'success' && '✓ Correcto' || '✗ Requiere fmt' }}\`
-            * **Inicialización (`init`):** \`${{ steps.init.outcome == 'success' && '✓ OK' || '✗ Fallo' }}\`
-            * **Sintaxis (`validate`):** \`${{ steps.validate.outcome == 'success' && '✓ Válida' || '✗ Errores' }}\`
-            * **Seguridad Trivy:** \`${{ steps.trivy.outcome == 'success' && '✓ Escaneado' || '✗ Revisar' }}\`
-            <details><summary> Ver desglose de cambios en la infraestructura (Click para desplegar)</summary>
+            const output = [
+              '### Terraform Plan & Quality Report',
+              '',
+              '#### Checks de Validación:',
+              '* **Formato:** ${{ steps.fmt.outcome == 'success' && '✓ Correcto' || '✗ Requiere fmt' }}',
+              '* **Inicialización:** ${{ steps.init.outcome == 'success' && '✓ OK' || '✗ Fallo' }}',
+              '* **Sintaxis:** ${{ steps.validate.outcome == 'success' && '✓ Válida' || '✗ Errores' }}',
+              '* **Seguridad Trivy:** ${{ steps.trivy.outcome == 'success' && '✓ Escaneado' || '✗ Revisar' }}',
+              '',
+              '<details><summary>Ver desglose de cambios</summary>',
+              '',
+              '```hcl',
+              planOutput,
+              '```',
+              '',
+              '</details>',
+              '',
+              '*Actor: @${{ github.actor }} | Commit: ${{ github.sha }}*'
+            ].join('\n');
 
-            \`\`\`hcl
-            ${planOutput}
-            \`\`\`
-
-            </details>
-
-            *Actor: @${{ github.actor }} | Commit: \`${{ github.sha }}\`*`;
-
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
