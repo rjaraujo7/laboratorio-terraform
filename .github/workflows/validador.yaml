@@ -82,6 +82,16 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
+      # NUEVO: Ejecución de Policy-as-Code con Checkov
+      - name: Run Policy-as-Code Checks (Checkov)
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+         framework: terraform
+         external_checks_dirs: policies/checkov
+         check: CKV2_CUSTOM_1
+         output_format: cli
+         soft_fail: false # Si una política falla, el pipeline se detiene en rojo
 
       - name: Initialize Terraform
         id: init
