@@ -1,0 +1,16 @@
+metadata:
+  id: "CKV2_CUSTOM_1"
+  name: "Restriccion de tamano de instancia (FinOps)"
+  category: "GENERAL_SECURITY"
+  guidelines: "Solo se permiten tipos de instancia t3.micro o t3.small"
+scope:
+  provider: "aws"
+definition:
+  cond_type: "attribute"
+  resource_types:
+    - "aws_instance"
+  attribute: "instance_type"
+  operator: "within"
+  value:
+    - "t3.micro"
+    - "t3.small"
