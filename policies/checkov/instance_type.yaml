@@ -6,11 +6,10 @@ metadata:
 scope:
   provider: "aws"
 definition:
-  cond_type: "attribute"
-  resource_types:
-    - "aws_instance"
-  attribute: "instance_type"
-  operator: "within"
-  value:
-    - "t3.micro"
-    - "t3.small"
+  or: 
+    - cond_type: "attribute"
+      resource_types:
+        - "aws_instance"
+      attribute: "instance_type"
+      operator: "equals"
+      value: "t3.micro"
