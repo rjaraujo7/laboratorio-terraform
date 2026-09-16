@@ -1,0 +1,27 @@
+metadata:
+  name: "Corporate Compliance Policies"
+  guidelines: "Politicas corporativas de seguridad y control de costes"
+  category: "GENERAL_SECURITY"
+scope:
+  provider: "aws"
+definition:
+  - cond_type: "attribute"
+    resource_types:
+      - "aws_instance"
+    attribute: "instance_type"
+    operator: "within"
+    value:
+      - "t3.micro"
+      - "t3.small"
+    name: "CKV2_CUSTOM_1: Restriccion de tamano de instancia (FinOps)"
+    id: "CKV2_CUSTOM_1"
+
+  - cond_type: "attribute"
+    resource_types:
+      - "aws_security_group_rule"
+      - "aws_security_group"
+    attribute: "cidr_blocks"
+    operator: "not_contains"
+    value: "0.0.0.0/0"
+    name: "CKV2_CUSTOM_2: Prohibido exponer SSH publico"
+    id: "CKV2_CUSTOM_2"
