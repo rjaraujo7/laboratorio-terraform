@@ -88,8 +88,9 @@ jobs:
         uses: bridgecrewio/checkov-action@master
         with:
          framework: terraform
-         external_checks_dir: policies/checkov
+         external_checks_dirs: policies/checkov
          check: CKV_CUSTOM_1,CKV_CUSTOM_2
+         output_format: cli
          soft_fail: false # Si una política falla, el pipeline se detiene en rojo
 
       - name: Initialize Terraform
