@@ -11,7 +11,7 @@ variable "subnet_id" {
 variable "instance_type" {
   description = "Tipo de instancia EC2 a levantar"
   type        = string
-  default     = "t3.large"
+  default     = "t3.micro"
 }
 
 variable "environment" {
